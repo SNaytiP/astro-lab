@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.fits
+out/
+
+# LaTeX build files
+docs/*.aux
+docs/*.log
+docs/*.fls
+docs/*.fdb_latexmk
+docs/*.out
+docs/*.synctex.gz

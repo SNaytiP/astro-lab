@@ -1,0 +1,95 @@
+\input{preamble}
+\begin{document}
+\session{Session 6: Computational Hydrodynamics in 1D}{Euler equations, finite volume, the HLL flux, the Sod shock tube}{reading notes}
+
+\textbf{Status:} reading notes and exercise specification. The code for this session (\texttt{06\_hydro\_1d/}) is not in the repository yet; the exercises below define what to build.
+
+\section*{Goals}
+Write a finite-volume solver for the 1D Euler equations, validate it on the Sod shock tube against the exact solution, and measure how its error behaves as the grid is refined.
+
+\section{The Euler equations}
+Gas dynamics without viscosity, conduction or gravity is a system of conservation laws,
+\[
+\frac{\partial\mathbf U}{\partial t}+\frac{\partial\mathbf F(\mathbf U)}{\partial x}=0,
+\qquad
+\mathbf U=\begin{pmatrix}\rho\\ \rho u\\ E\end{pmatrix},\quad
+\mathbf F=\begin{pmatrix}\rho u\\ \rho u^2+P\\ u(E+P)\end{pmatrix},
+\]
+with total energy density $E=\dfrac{P}{\gamma-1}+\tfrac12\rho u^2$ for an ideal gas, and sound speed $c=\sqrt{\gamma P/\rho}$. Because the equations are in conservation form, mass, momentum and energy are conserved to round-off by any scheme that updates cells by flux differences. That is the main reason to use finite volume rather than finite differences on primitive variables.
+
+\section{Finite-volume update}
+Divide the domain into cells of width $\Delta x$ with cell averages $\mathbf U_i$. Then
+\[
+\mathbf U_i^{n+1}=\mathbf U_i^n-\frac{\Delta t}{\Delta x}\left(\mathbf F_{i+1/2}-\mathbf F_{i-1/2}\right),
+\]
+where $\mathbf F_{i+1/2}$ is a numerical flux computed from the states on the two sides of the interface. Stability requires the CFL condition
+\[
+\Delta t=C\,\frac{\Delta x}{\max_i\left(|u_i|+c_i\right)},\qquad C\le1 \ (\text{use }0.4\text{--}0.8).
+\]
+
+\subsection*{The HLL flux}
+Estimate the fastest left- and right-moving wave speeds at an interface (Davis estimates):
+\[
+S_L=\min(u_L-c_L,\ u_R-c_R),\qquad S_R=\max(u_L+c_L,\ u_R+c_R).
+\]
+Then
+\[
+\mathbf F^{\mathrm{HLL}}=
+\begin{cases}
+\mathbf F_L & S_L\ge0,\\[3pt]
+\dfrac{S_R\mathbf F_L-S_L\mathbf F_R+S_LS_R(\mathbf U_R-\mathbf U_L)}{S_R-S_L} & S_L<0<S_R,\\[10pt]
+\mathbf F_R & S_R\le0.
+\end{cases}
+\]
+HLL is robust and simple but smears contact discontinuities because it ignores the middle wave. HLLC restores it. Lax--Friedrichs is the simplest flux and the most diffusive; it is a good first implementation to get the bookkeeping right.
+
+\begin{keyidea}
+\textbf{First-order versus second-order.} Using the cell values directly on both sides of an interface gives a first-order scheme: stable but diffusive. Reconstructing a linear profile in each cell with a slope limiter (minmod, MC) and a half-step predictor gives second order in smooth regions without spurious oscillations at shocks.
+\end{keyidea}
+
+\section{The Sod shock tube}
+Initial conditions on $x\in[0,1]$, diaphragm at $x=0.5$, $\gamma=1.4$:
+\[
+(\rho,u,P)=(1,\,0,\,1)\ \ (x<0.5),\qquad (\rho,u,P)=(0.125,\,0,\,0.1)\ \ (x>0.5).
+\]
+At $t=0.2$ the exact solution has a left-moving rarefaction fan, a contact discontinuity and a right-moving shock. Standard values for the intermediate states:
+\begin{center}
+\begin{tabular}{@{}lr@{}}
+\toprule
+Quantity & Value \\ \midrule
+$P_*$ & 0.30313 \\
+$u_*$ & 0.92745 \\
+$\rho_{*L}$ (left of contact) & 0.42632 \\
+$\rho_{*R}$ (right of contact) & 0.26557 \\
+\bottomrule
+\end{tabular}
+\end{center}
+At $t=0.2$ the features sit at approximately $x\approx0.263$ (rarefaction head), $0.486$ (rarefaction tail), $0.686$ (contact) and $0.850$ (shock).
+
+\section{Implementation plan}
+\begin{enumerate}
+\item Arrays of conserved variables with two ghost cells; transmissive boundaries.
+\item Functions \texttt{prim\_to\_cons}, \texttt{cons\_to\_prim}, \texttt{flux}, \texttt{hll\_flux}.
+\item Time loop with the CFL timestep, stopping exactly at $t=0.2$.
+\item Check: total mass, momentum and energy are conserved to round-off until waves reach the boundary.
+\item Compare density, velocity and pressure with the exact solution (write a Riemann solver or use a published reference solution).
+\item Convergence study: $N=100,200,400,800,1600$; plot the $L_1$ density error versus $\Delta x$ on log--log axes.
+\end{enumerate}
+
+\section{Exercises}
+\begin{enumerate}
+\item Implement Lax--Friedrichs first and compare against HLL; describe the difference at the contact.
+\item Add MUSCL reconstruction with a minmod limiter and measure the improvement.
+\item Explain why the measured $L_1$ convergence rate at a solution with discontinuities is lower than the scheme's formal order.
+\item Test a case with a strong shock-tube such as the Lax problem or a double rarefaction (123 problem) and note any failures (negative pressure) and how to guard against them.
+\item Connect to Session 3: add a static gravitational source term and check that an isothermal atmosphere stays in hydrostatic balance.
+\end{enumerate}
+
+\section*{References}
+\begin{itemize}
+\item Toro, \textit{Riemann Solvers and Numerical Methods for Fluid Dynamics}, ch.\ 4, 10
+\item LeVeque, \textit{Finite Volume Methods for Hyperbolic Problems}
+\item Zingale, \textit{Computational Hydrodynamics for Astrophysics} (lecture notes; search for the title)
+\item Sod (1978), \textit{J.\ Comput.\ Phys.} 27, 1
+\end{itemize}
+\end{document}

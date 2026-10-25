@@ -1,0 +1,92 @@
+\input{preamble}
+\begin{document}
+\session{Session 3: Stellar Structure Basics}{Hydrostatic equilibrium, polytropes, the Lane--Emden equation}{reading notes}
+
+\section*{Goals}
+Derive the equations of a simple stellar model, reduce them to one dimensionless ODE, and solve it numerically for several polytropic indices, checking against analytic solutions.
+
+\section{Equations of structure}
+For a spherical star in equilibrium, with $m(r)$ the mass inside radius $r$:
+\begin{align}
+\frac{\dd m}{\dd r} &= 4\pi r^2\rho, \label{eq:mass}\\
+\frac{\dd P}{\dd r} &= -\frac{G\,m\,\rho}{r^2}. \label{eq:hse}
+\end{align}
+Equation~\eqref{eq:hse} (hydrostatic equilibrium) says pressure gradient balances gravity. A real star also needs energy transport and an equation of state; a polytrope sidesteps them with a single assumption.
+
+\section{Polytropes}
+Assume $P = K\rho^{1+1/n}$, where $n$ is the polytropic index. Rewrite~\eqref{eq:hse} as $\frac{1}{\rho}\frac{\dd P}{\dd r}=-\frac{Gm}{r^2}$, multiply by $r^2$ and differentiate, then use~\eqref{eq:mass}:
+\[
+\frac{1}{r^2}\frac{\dd}{\dd r}\!\left(\frac{r^2}{\rho}\frac{\dd P}{\dd r}\right) = -4\pi G\rho .
+\]
+Write $\rho=\rho_c\theta^n$ and $r=a\xi$ with
+\[
+a^2=\frac{(n+1)K\rho_c^{1/n-1}}{4\pi G}.
+\]
+Substituting gives the \textbf{Lane--Emden equation}
+\[
+\frac{1}{\xi^2}\frac{\dd}{\dd\xi}\!\left(\xi^2\frac{\dd\theta}{\dd\xi}\right) = -\theta^n,
+\qquad \theta(0)=1,\ \ \theta'(0)=0 .
+\]
+The surface is the first zero $\xi_1$ where $\theta(\xi_1)=0$.
+
+\subsection*{Behaviour near the centre}
+The equation is singular at $\xi=0$. A series gives
+\[
+\theta \approx 1 - \frac{\xi^2}{6} + \frac{n\,\xi^4}{120} - \cdots
+\]
+so a numerical solver should start at a small $\xi_0>0$ using the series values, which is exactly what the script does.
+
+\section{Analytic checks}
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+$n$ & Solution $\theta(\xi)$ & $\xi_1$ \\ \midrule
+0 & $1-\xi^2/6$ & $\sqrt6 \approx 2.4495$ \\
+1 & $\sin\xi/\xi$ & $\pi \approx 3.1416$ \\
+5 & $(1+\xi^2/3)^{-1/2}$ & $\infty$ (infinite radius, finite mass) \\
+\bottomrule
+\end{tabular}
+\end{center}
+Numerical values from the repository script, which agree with the standard tabulated values:
+\begin{center}
+\begin{tabular}{@{}lr@{}}
+\toprule
+$n$ & $\xi_1$ \\ \midrule
+0 & 2.44949 \\
+1 & 3.14159 \\
+1.5 & 3.65375 \\
+3 & 6.89685 \\
+4 & 14.97155 \\
+\bottomrule
+\end{tabular}
+\end{center}
+$n=1.5$ models a fully convective star or a non-relativistic degenerate gas (white dwarf); $n=3$ is Eddington's standard model for radiation-dominated, high-mass stars.
+
+\section{Mass and central density}
+Integrating~\eqref{eq:mass} with $\rho=\rho_c\theta^n$ gives
+\[
+M = 4\pi a^3\rho_c\left(-\xi^2\frac{\dd\theta}{\dd\xi}\right)_{\xi_1},
+\qquad R = a\,\xi_1 .
+\]
+The mean-to-central density ratio is $\bar\rho/\rho_c = -\dfrac{3}{\xi_1}\theta'(\xi_1)$. For $n=3$ this is about $1/54$, so such stars are strongly centrally concentrated.
+
+\section{Code walkthrough}
+\lstinputlisting{../03_stellar_structure/lane_emden.py}
+
+Notes on the implementation: the right-hand side uses $\max(\theta,0)^n$ so the solver does not take a fractional power of a small negative number; the terminal event $\theta=0$ stops the integration at the surface.
+
+\section{Exercises}
+\begin{enumerate}
+\item Plot $\theta(\xi)$ for $n=0,1,1.5,3,4$ on one axes and compare with the analytic curves where they exist.
+\item Compute $M$ and $R$ for an $n=3$ polytrope with the Sun's $M$ and $R$; solve for $K$ and $\rho_c$. Compare $\rho_c$ with the true solar core density ($\sim 150\ \mathrm{g\,cm^{-3}}$).
+\item Why does $n=5$ have no finite surface? Show $\theta=(1+\xi^2/3)^{-1/2}$ satisfies the equation.
+\item Build a Gaia HR diagram (Session 1) and mark where $n=1.5$ and $n=3$ models would sit qualitatively.
+\end{enumerate}
+
+\section*{References}
+\begin{itemize}
+\item Hansen, Kawaler, Trimble, \textit{Stellar Interiors}, ch.\ 7
+\item Kippenhahn, Weigert, Weiss, \textit{Stellar Structure and Evolution}
+\item Chandrasekhar, \textit{An Introduction to the Study of Stellar Structure}, ch.\ IV
+\end{itemize}
+\end{document}
