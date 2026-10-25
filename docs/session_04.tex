@@ -1,0 +1,72 @@
+\input{preamble}
+\begin{document}
+\session{Session 4: Radiative Processes}{Blackbody radiation, temperature scales, spectral lines}{reading notes}
+
+\textbf{Status:} reading notes and exercise specification. The code for this session (\texttt{04\_radiation/}) is not in the repository yet; the exercises below define what to build.
+
+\section*{Goals}
+Use the Planck function to relate a star's colour, temperature and luminosity, and fit an absorption line profile to extract a line centre, width and equivalent width.
+
+\section{The Planck function}
+The specific intensity of a blackbody at temperature $T$, per unit wavelength, is
+\[
+B_\lambda(T) = \frac{2hc^2}{\lambda^5}\,\frac{1}{\exp\!\left(\dfrac{hc}{\lambda k_BT}\right)-1}.
+\]
+Two limits are worth deriving yourself:
+\begin{itemize}
+\item \textbf{Rayleigh--Jeans} ($hc/\lambda k_BT\ll1$): $B_\lambda\approx 2ck_BT/\lambda^4$.
+\item \textbf{Wien} ($hc/\lambda k_BT\gg1$): $B_\lambda\approx (2hc^2/\lambda^5)\,e^{-hc/\lambda k_BT}$.
+\end{itemize}
+
+\section{Wien and Stefan--Boltzmann}
+Setting $\dd B_\lambda/\dd\lambda=0$ gives Wien's displacement law,
+\[
+\lambda_{\max}T = b \approx 2.898\times10^{-3}\ \mathrm{m\,K}.
+\]
+Integrating over all wavelengths and solid angle gives the flux $F=\sigma T^4$ with $\sigma\approx5.670\times10^{-8}\ \mathrm{W\,m^{-2}\,K^{-4}}$. For a spherical star,
+\[
+L = 4\pi R^2\sigma T_{\mathrm{eff}}^4 .
+\]
+Using $L_\odot=3.828\times10^{26}$ W and $R_\odot=6.957\times10^{8}$ m gives $T_{\mathrm{eff},\odot}\approx 5772$ K, a good check for your code.
+
+\begin{keyidea}
+\textbf{Why $L\propto R^2T^4$ matters.} A red giant and a white dwarf can share a colour but differ in luminosity by many orders of magnitude, purely through $R$. This is the geometric reason the HR diagram has distinct branches.
+\end{keyidea}
+
+\section{Spectral lines}
+Line profiles come from three broadening mechanisms:
+\begin{itemize}
+\item \textbf{Natural}: Lorentzian, from the finite lifetime of the level.
+\item \textbf{Doppler} (thermal and turbulent): Gaussian, $\sigma_D=\dfrac{\lambda_0}{c}\sqrt{\dfrac{k_BT}{m}}$ for thermal motion.
+\item \textbf{Pressure}: Lorentzian, from collisions.
+\end{itemize}
+Gaussian and Lorentzian combine into a \textbf{Voigt} profile (their convolution), usually evaluated with the Faddeeva function (\texttt{scipy.special.wofz}). The \textbf{equivalent width}
+\[
+W_\lambda = \int\left(1-\frac{F_\lambda}{F_c}\right)\dd\lambda
+\]
+is the width of a fully absorbed rectangle with the same area; it measures line strength independent of resolution.
+
+\section{Implementation plan}
+\begin{enumerate}
+\item Write \texttt{planck(lam, T)} with units; test the Wien peak numerically against $b/T$ for $T=3000$, $5772$, $10000$ K.
+\item Integrate the Planck function numerically and check $\sigma T^4/\pi$ for the intensity integral.
+\item Generate a synthetic spectrum: Planck continuum $\times$ a Voigt absorption line plus Gaussian noise.
+\item Fit with \texttt{scipy.optimize.curve\_fit}; report best-fit centre, width and uncertainties from the covariance matrix.
+\item Compare the fitted line depth with the equivalent width computed by direct integration.
+\end{enumerate}
+
+\section{Exercises}
+\begin{enumerate}
+\item Compute the peak wavelength for the Sun, Betelgeuse ($\sim3600$ K) and Rigel ($\sim12\,000$ K) and say which lie in the visible range.
+\item Derive the Rayleigh--Jeans limit from the Planck function.
+\item Estimate the thermal Doppler width of H$\alpha$ (656.28 nm) at 6000 K and compare with typical observed widths.
+\item Show how the fitted width uncertainty scales with the noise level and with the number of pixels across the line.
+\end{enumerate}
+
+\section*{References}
+\begin{itemize}
+\item Rybicki \& Lightman, \textit{Radiative Processes in Astrophysics}, ch.\ 1 and 10
+\item Gray, \textit{The Observation and Analysis of Stellar Photospheres}
+\item Carroll \& Ostlie, \textit{An Introduction to Modern Astrophysics}, ch.\ 3 and 8
+\end{itemize}
+\end{document}

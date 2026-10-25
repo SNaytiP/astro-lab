@@ -1,0 +1,50 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\definecolor{codegray}{gray}{0.45}
+\definecolor{codeblue}{rgb}{0.1,0.2,0.6}
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codeblue},
+  commentstyle=\color{codegray}\itshape,
+  stringstyle=\color{teal},
+  showstringspaces=false,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{black!25},
+  numbers=left,
+  numberstyle=\tiny\color{codegray},
+  literate={θ}{$\theta$}1 {ξ}{$\xi$}1,
+}
+
+\newcommand{\session}[3]{%
+  \title{\textbf{#1}\\[2pt]\large #2}
+  \author{astro-lab \,--\, #3}
+  \date{}
+  \maketitle
+  \vspace{-1.5em}
+}
+\newcommand{\todo}[1]{\textcolor{red!60!black}{\textbf{[#1]}}}
+\usepackage{framed}
+\newenvironment{keyidea}{%
+  \def\FrameCommand{\color{blue!40!black}\vrule width 2.5pt\hspace{8pt}\color{black}}%
+  \MakeFramed{\advance\hsize-\width\FrameRestore}}{\endMakeFramed}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\pc}{\,\mathrm{pc}}
+\newcommand{\Msun}{M_\odot}
+\newcommand{\Rsun}{R_\odot}
+\setlist[itemize]{itemsep=2pt,topsep=4pt}
+\setlist[enumerate]{itemsep=3pt,topsep=4pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}

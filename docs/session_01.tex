@@ -1,0 +1,75 @@
+\input{preamble}
+\begin{document}
+\session{Session 1: Data and Coordinates}{Units, sky coordinates, time, distances, Gaia}{reading notes}
+
+\section*{Goals}
+After this session you can (i) carry units through a calculation without losing track of dimensions, (ii) convert a sky position between ICRS, Galactic and horizontal coordinates, (iii) explain why astronomy uses several time scales, and (iv) turn a Gaia parallax and magnitude into an absolute magnitude for an HR diagram.
+
+\section{Units and dimensional analysis}
+Astronomical quantities span tens of orders of magnitude, so errors usually come from unit mistakes rather than algebra. \texttt{astropy.units} attaches a unit to every number and refuses to add incompatible ones.
+
+\begin{keyidea}
+\textbf{Worked example (Kepler's third law).} For a small body orbiting a mass $M$ on a circular orbit of radius $a$, gravity supplies the centripetal force:
+\[
+\frac{GMm}{a^2} = m\,\omega^2 a
+\quad\Rightarrow\quad
+P = \frac{2\pi}{\omega} = 2\pi\sqrt{\frac{a^3}{GM}} .
+\]
+For $a = 1\,\mathrm{au}$ and $M=\Msun$ this gives $P\approx 365.26$ d, which is what the script prints. The same formula holds for ellipses with $a$ the semi-major axis.
+\end{keyidea}
+
+\section{Sky coordinates}
+\begin{itemize}
+\item \textbf{ICRS} (RA, Dec): the modern equatorial frame, fixed to distant quasars. Catalogs such as Gaia use it.
+\item \textbf{Galactic} $(\ell, b)$: longitude measured from the Galactic centre, latitude from the Galactic plane. Useful for stellar populations.
+\item \textbf{Horizontal} (Alt, Az): depends on observer location and time; what a telescope actually points to.
+\end{itemize}
+Converting between frames is a rotation of the unit vector on the sphere. In Astropy it is one call, \texttt{coord.transform\_to(frame)}, but you should know the rotation exists: write RA/Dec as
+$\hat n = (\cos\delta\cos\alpha,\ \cos\delta\sin\alpha,\ \sin\delta)$ and apply a fixed $3\times3$ rotation matrix for ICRS$\to$Galactic.
+
+\section{Time}
+Several time scales exist because Earth's rotation is irregular:
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Scale & Use \\ \midrule
+UTC & civil time, has leap seconds \\
+TAI & continuous atomic time \\
+TT & time for geocentric ephemerides ($\mathrm{TT}=\mathrm{TAI}+32.184$ s) \\
+TDB & barycentric time, used for solar-system and pulsar timing \\
+\bottomrule
+\end{tabular}
+\end{center}
+Julian Date (JD) counts days continuously and is convenient for light curves. Always record the scale together with the number.
+
+\section{Distances and the HR diagram}
+Parallax $\varpi$ (in arcseconds) gives $d = 1/\varpi$ parsecs. With $\varpi$ in milliarcseconds, the absolute magnitude from an apparent magnitude $m$ is
+\[
+M = m + 5\log_{10}\!\left(\frac{\varpi}{100\,\mathrm{mas}}\right).
+\]
+Derivation: $M = m - 5\log_{10}(d/10\pc)$ and $d = 1000/\varpi_{\mathrm{mas}}\pc$.
+
+Plot $M_G$ (inverted axis) against the colour $G_{BP}-G_{RP}$ for stars with \texttt{parallax\_over\_error} $> 10$. You should see the main sequence, the red giant branch and the white dwarf sequence. Selecting on parallax precision introduces a bias; note it in your write-up.
+
+\section{FITS in one paragraph}
+A FITS file is a sequence of header--data units (HDUs). Each header is ASCII \texttt{KEY = value} cards; the data is an image or table. Read with \texttt{astropy.io.fits.open}, and always inspect \texttt{hdul.info()} before assuming where the data lives.
+
+\section{Code walkthrough}
+The repository script \texttt{astropy\_basics.py} covers units, a coordinate conversion, an altitude calculation and time scales. The Gaia query is commented out because it needs network access.
+\lstinputlisting{../01_data_and_coordinates/astropy_basics.py}
+
+\section{Exercises}
+\begin{enumerate}
+\item Compute Mars' orbital period from $a=1.524$ au and compare with 687 d.
+\item Convert the coordinates of three bright stars from ICRS to Galactic and explain which one is closest to the Galactic plane.
+\item Explain the number 69.18 s: the script shows TDB is about 69.18 s ahead of UTC on 2026-10-25. Break it into the 32.184 s TT$-$TAI offset, the accumulated leap seconds (TAI$-$UTC), and the small periodic TDB$-$TT term (at most about 1.7 ms).
+\item Query 10\,000 Gaia stars and make the HR diagram. Repeat with \texttt{parallax\_over\_error} $>5$ and describe what changes.
+\end{enumerate}
+
+\section*{References}
+\begin{itemize}
+\item Astropy tutorials: \url{https://learn.astropy.org}
+\item Astropy documentation for \texttt{units}, \texttt{coordinates}, \texttt{time}
+\item Gaia Collaboration, \textit{Gaia Data Release 3} (documentation on the ESA Gaia site)
+\end{itemize}
+\end{document}

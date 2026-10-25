@@ -1,0 +1,96 @@
+\input{preamble}
+\begin{document}
+\session{Project: A From-Scratch N-body Simulator}{Direct summation, softening, leapfrog, Plummer initial conditions, diagnostics}{reading notes}
+
+\section*{Goals}
+Understand every line of a small gravitational N-body code, know what each test verifies, and have a clear plan for making it faster (Barnes--Hut, then GPU).
+
+\section{The model}
+$N$ point masses interact through Newtonian gravity. In units $G=1$ with Plummer softening $\varepsilon$, the acceleration of particle $i$ is
+\[
+\mathbf a_i=G\sum_{j\ne i}\frac{m_j\,(\mathbf r_j-\mathbf r_i)}{\left(|\mathbf r_j-\mathbf r_i|^2+\varepsilon^2\right)^{3/2}}.
+\]
+Softening removes the singularity at close encounters. It corresponds exactly to the potential energy
+\[
+W=-G\sum_{i<j}\frac{m_im_j}{\sqrt{|\mathbf r_{ij}|^2+\varepsilon^2}},
+\]
+and the code uses this same $W$, so total energy $E=K+W$ is the quantity a symplectic integrator should conserve. Using an inconsistent potential would make the energy test meaningless.
+
+\section{Code structure}
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+File & Role \\ \midrule
+\texttt{forces.py} & vectorised $O(N^2)$ accelerations (pairwise displacement array, no self-force) \\
+\texttt{integrators.py} & kick--drift--kick leapfrog step and a run loop with a callback \\
+\texttt{ics.py} & circular binary, Plummer sphere \\
+\texttt{diagnostics.py} & kinetic, potential, total energy, momentum, virial ratio \\
+\bottomrule
+\end{tabular}
+\end{center}
+Memory is $O(N^2)$ because the full displacement array is built; this limits the NumPy version to a few thousand particles, which is fine for learning and for testing a faster implementation against.
+
+\lstinputlisting{../projects/nbody/nbody/forces.py}
+
+\section{Leapfrog}
+The integrator is the same kick--drift--kick scheme from Session 2, applied to all particles at once. The acceleration at the end of one step is reused as the start of the next, so each step costs one force evaluation. A fixed timestep is used; it should resolve the shortest dynamical time in the system.
+\lstinputlisting{../projects/nbody/nbody/integrators.py}
+
+\section{Plummer sphere}
+The Plummer model has density and enclosed mass
+\[
+\rho(r)=\frac{3M}{4\pi a^3}\left(1+\frac{r^2}{a^2}\right)^{-5/2},\qquad
+M(<r)=\frac{Mr^3}{(r^2+a^2)^{3/2}},
+\]
+and potential $\Phi(r)=-GM/\sqrt{r^2+a^2}$.
+
+\textbf{Sampling positions.} Draw $u\sim U(0,1)$ and set $M(<r)/M=u$. Writing $x=r^2/a^2$ gives $u^{2/3}=x/(1+x)$, so
+\[
+r=\frac{a}{\sqrt{u^{-2/3}-1}} .
+\]
+Directions are uniform on the sphere.
+
+\textbf{Sampling speeds.} The escape speed is $v_{\mathrm{esc}}=\sqrt{2GM}\,(r^2+a^2)^{-1/4}$. With $q=v/v_{\mathrm{esc}}$, the distribution function implies $q$ has density $g(q)\propto q^2(1-q^2)^{7/2}$, sampled by rejection. Finally the system is shifted to the centre-of-mass frame in position and velocity.
+
+\lstinputlisting{../projects/nbody/nbody/ics.py}
+
+\section{What the tests verify}
+\begin{center}
+\begin{tabular}{@{}p{0.38\linewidth}p{0.55\linewidth}@{}}
+\toprule
+Test & Physical statement \\ \midrule
+\texttt{test\_binary\_energy\_conserved} & circular binary over 10 periods, $\Delta t=10^{-3}$: relative energy error below $10^{-6}$ \\
+\texttt{test\_binary\_returns\_to\_start} & after exactly one period positions return to within $10^{-5}$ (checks the orbital frequency) \\
+\texttt{test\_momentum\_conserved\_plummer} & pairwise forces are equal and opposite, so total momentum is constant to round-off \\
+\texttt{test\_newton\_third\_law} & $\sum_i m_i\mathbf a_i=0$ for random masses and positions \\
+\texttt{test\_plummer\_roughly\_virialised} & $2K/|W|$ within $0.8$--$1.2$ for $N=2000$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Example run (\texttt{run\_plummer.py 256 300}, $\varepsilon=0.05$, $\Delta t=0.01$): initial virial ratio $1.109$, final $1.038$, relative energy change $-1.9\times10^{-7}$. The initial virial ratio is not exactly 1 because $N=256$ is small (sampling noise) and the sampling ignores softening.
+
+\section{Roadmap: making it fast}
+\begin{enumerate}
+\item \textbf{Barnes--Hut tree.} Group distant particles into a tree of cells; if a cell of size $s$ at distance $d$ satisfies $s/d<\theta$ (typically $\theta\approx0.5$--$0.7$), treat it as a single point mass at its centre of mass. Cost drops from $O(N^2)$ to $O(N\log N)$ at the price of a controlled force error. Validate against the direct sum on the same particle set and plot force error versus $\theta$.
+\item \textbf{GPU forces.} The all-pairs kernel is a natural fit for a compute shader: one thread per particle, tile positions through shared memory. Benchmark against the NumPy version for $N=10^3$ to $10^5$ and plot time versus $N$ on log--log axes.
+\item \textbf{Timestepping.} Individual or block timesteps help when particles have very different dynamical times; they need care to retain good energy behaviour.
+\item \textbf{External validation.} Reproduce the figure-eight three-body orbit and compare with REBOUND.
+\end{enumerate}
+
+\section{Exercises}
+\begin{enumerate}
+\item Plot energy error versus $\Delta t$ for the Plummer run; confirm it scales as $\Delta t^2$ for a fixed duration.
+\item Plot the Lagrangian radii (containing 10\%, 50\%, 90\% of the mass) over time. Do they stay constant for a Plummer sphere in equilibrium?
+\item Remove softening ($\varepsilon=0$) and find a close encounter that ruins energy conservation.
+\item Estimate the relaxation time and explain why a collisionless approximation is appropriate for a galaxy but not for a globular cluster over many Gyr.
+\end{enumerate}
+
+\section*{References}
+\begin{itemize}
+\item Aarseth, Henon, Wielen (1974), \textit{A\&A} 37, 183 (Plummer initial conditions)
+\item Barnes \& Hut (1986), \textit{Nature} 324, 446
+\item Binney \& Tremaine, \textit{Galactic Dynamics}, ch.\ 2
+\item Nyland, Harris, Prins, ``Fast N-body Simulation with CUDA'', \textit{GPU Gems 3}, ch.\ 31
+\end{itemize}
+\end{document}
